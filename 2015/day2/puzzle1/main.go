@@ -67,7 +67,6 @@ func main() {
 	reader := bufio.NewReader(file)
 
 	var total uint64 = 0
-	count := 0
 
 	for {
 		r, _, err := reader.ReadLine()
@@ -78,7 +77,7 @@ func main() {
 			log.Fatalln(err)
 			break
 		}
-		count++
+
 		box := newBox(string(r))
 		total += box.totalPaperNeeded()
 	}
