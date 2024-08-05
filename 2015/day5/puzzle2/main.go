@@ -25,6 +25,6 @@ func main() {
 			log.Fatalln(err)
 		}
 
-		fmt.Println(string(line))
+		fmt.Println(line)
 	}
 }
