@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -29,7 +30,9 @@ func createReader(file *os.File) *bufio.Reader {
 	return reader
 }
 
-func readLines(reader *bufio.Reader) {
+func readLines(reader *bufio.Reader) map[string]string {
+
+	circuitMap := map[string]string{}
 
 	for {
 		line, err := reader.ReadString('\n')
@@ -40,10 +43,18 @@ func readLines(reader *bufio.Reader) {
 			log.Fatalf("could not read the line error is: %v", err)
 		}
 
-		fmt.Println(line)
+		circuitMap[getMapKey(line)] = getMapValue(line)
 
 	}
+	return circuitMap
+}
 
+func getMapKey(text string) string {
+	return strings.Split(text, " -> ")[1]
+}
+
+func getMapValue(text string) string {
+	return strings.Split(text, " -> ")[0]
 }
 
 func puzzle1() int {
@@ -51,6 +62,7 @@ func puzzle1() int {
 
 	reader := createReader(file)
 
-	readLines(reader)
+	circuitMap := readLines(reader)
+	fmt.Println(circuitMap)
 	return 0
 }
