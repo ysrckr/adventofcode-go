@@ -2,12 +2,62 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
 )
+
+type Instruction struct {
+	command     string
+	arguments   []string
+	destination string
+}
+
+func newInstruction(line *string) Instruction {
+	instruction := Instruction{}
+
+	commandRe := regexp.MustCompile(`[A-Z]+`)
+	argumentsRe := regexp.MustCompile(`[a-z0-9]+`)
+
+	instruction.command = commandRe.FindString(*line)
+	instruction.arguments = argumentsRe.FindAllString(*line, -1)
+	instruction.destination = instruction.arguments[len(instruction.arguments)-1]
+	instruction.arguments = instruction.arguments[:len(instruction.arguments)-1]
+
+	return instruction
+}
+
+type Operation interface {
+	not(uint16) uint16
+	or(uint16, uint16) uint16
+	and(uint16, uint16) uint16
+	leftShift(uint16, uint16) uint16
+	rightShift(uint16, uint16) uint16
+}
+
+func not(a uint16) uint16 {
+	return ^a
+}
+
+func or(a, b uint16) uint16 {
+	return a | b
+}
+
+func and(a, b uint16) uint16 {
+	return a & b
+}
+
+func leftShift(a, b uint16) uint16 {
+	return a << b
+}
+
+func rightShift(a, b uint16) uint16 {
+	return a >> b
+}
+
+var wires map[string]uint64
 
 func main() {
 	file := openFile()
@@ -27,9 +77,12 @@ func main() {
 	// 	"NOT y -> i",
 	// }
 
-	result := puzzle1(lines)
+	for _, line := range lines {
+		instruction := newInstruction(&line)
 
-	fmt.Println(result)
+		wires[instruction.destination] = 0
+	}
+
 }
 
 func openFile() *os.File {
@@ -64,32 +117,6 @@ func readLines(reader *bufio.Reader) []string {
 
 	}
 	return lines
-}
-
-func puzzle1(lines []string) uint16 {
-	var wires map[string]string
-
-	return 0
-}
-
-func notOperation(a uint16) uint16 {
-	return ^a
-}
-
-func orOperation(a, b uint16) uint16 {
-	return a | b
-}
-
-func andOperation(a, b uint16) uint16 {
-	return a & b
-}
-
-func leftShiftOperation(a, b uint16) uint16 {
-	return a << b
-}
-
-func rightShiftOperation(a, b uint16) uint16 {
-	return a >> b
 }
 
 func isInt(possibleInt string) bool {
