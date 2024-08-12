@@ -7,12 +7,28 @@ import (
 	"log"
 	"os"
 	"regexp"
-	"slices"
 	"strconv"
 )
 
 func main() {
-	result := puzzle1()
+	file := openFile()
+
+	reader := createReader(file)
+
+	lines := readLines(reader)
+
+	// lines := []string{
+	// 	"123 -> x",
+	// 	"456 -> y",
+	// 	"x AND y -> d",
+	// 	"x OR y -> e",
+	// 	"x LSHIFT 2 -> f",
+	// 	"y RSHIFT 2 -> g",
+	// 	"NOT x -> h",
+	// 	"NOT y -> i",
+	// }
+
+	result := puzzle1(lines)
 
 	fmt.Println(result)
 }
@@ -51,8 +67,8 @@ func readLines(reader *bufio.Reader) []string {
 	return lines
 }
 
-func findValues(lines *[]string) map[string]int {
-	values := map[string]int{}
+func findValues(lines *[]string) map[string]uint16 {
+	values := map[string]uint16{}
 	re := regexp.MustCompile(`(\d+) -> (\w+)`)
 
 	for _, line := range *lines {
@@ -61,69 +77,65 @@ func findValues(lines *[]string) map[string]int {
 			continue
 		}
 
-		_, ok := values[match[2]]
-		if ok {
-			continue
-		}
-
 		matchInInt, err := strconv.Atoi(match[1])
 		if err != nil {
 			continue
 		}
 
-		values[match[2]] = matchInInt
+		values[match[2]] = uint16(matchInInt)
 	}
+
+	fmt.Println(values)
 
 	return values
 }
 
-func filterCircuit(lines *[]string) {
-	re := regexp.MustCompile(`(\d+) -> (\w+)`)
-	new := []string{}
-
-	for i, line := range *lines {
-		match := re.MatchString(line)
-		if match == false {
-			continue
-		}
-
-		new = slices.Delete(*lines, i, i+1)
-		*lines = new
-
-	}
-
-}
-
-func notOperation(a int) int {
+func notOperation(a uint16) uint16 {
 	return ^a
 }
 
-func orOperation(a, b int) int {
+func orOperation(a, b uint16) uint16 {
 	return a | b
 }
 
-func andOperation(a, b int) int {
+func andOperation(a, b uint16) uint16 {
 	return a & b
 }
 
-func leftShiftOperation(a, b int) int {
+func leftShiftOperation(a, b uint16) uint16 {
 	return a << b
 }
 
-func rightShiftOperation(a, b int) int {
+func rightShiftOperation(a, b uint16) uint16 {
 	return a >> b
 }
 
-func operate(line *string, values map[string]int) {
-	re := regexp.MustCompile(`(\w{1,2}) (LSHIFT|RSHIFT|AND|OR) (\w{1,2}|\d) -> (\w{1,2})`)
+func operate(line *string, values map[string]uint16) {
+	re := regexp.MustCompile(`(\w{1,2}) (RSHIFT|AND|OR|LSHIFT) (\w{1,2}|\d) -> (\w{1,2})`)
 	renot := regexp.MustCompile(`(NOT) (\w{1,2}|\d) -> (\w{1,2})`)
 	reg := regexp.MustCompile(`(\w{1,2}) -> (\w{1,2})`)
 
-	matchSwap := reg.MatchString(*line)
-	if matchSwap == true {
+	matchreg := reg.MatchString(*line)
+	if matchreg == true {
 		match := reg.FindStringSubmatch(*line)
+		var v uint16
+		r, err := strconv.Atoi(match[1])
+		if err != nil {
+			v = values[match[1]]
+		}
 
-		values[match[2]] = values[match[1]]
+		v = uint16(r)
+
+		values[match[2]] = v
+	}
+
+	matchnot := renot.MatchString(*line)
+	if matchnot == true {
+		match := renot.FindStringSubmatch(*line)
+		a := values[match[2]]
+		result := notOperation(a)
+
+		values[match[3]] = result
 	}
 
 	match := re.MatchString(*line)
@@ -132,21 +144,40 @@ func operate(line *string, values map[string]int) {
 		switch match[2] {
 		case "AND":
 			a := values[match[1]]
-			b := values[match[3]]
+
+			var b uint16
+			r, err := strconv.Atoi(match[3])
+			if err != nil {
+				b = values[match[3]]
+			}
+
+			b = uint16(r)
 
 			result := andOperation(a, b)
 
 			values[match[4]] = result
 		case "OR":
 			a := values[match[1]]
-			b := values[match[3]]
+			var b uint16
+			r, err := strconv.Atoi(match[3])
+			if err != nil {
+				b = values[match[3]]
+			}
+
+			b = uint16(r)
 
 			result := orOperation(a, b)
 
 			values[match[4]] = result
 		case "LSHIFT":
 			a := values[match[1]]
-			b := values[match[3]]
+			var b uint16
+			r, err := strconv.Atoi(match[3])
+			if err != nil {
+				b = values[match[3]]
+			}
+
+			b = uint16(r)
 
 			result := leftShiftOperation(a, b)
 
@@ -154,39 +185,29 @@ func operate(line *string, values map[string]int) {
 
 		case "RSHIFT":
 			a := values[match[1]]
-			b := values[match[3]]
+			var b uint16
+			r, err := strconv.Atoi(match[3])
+			if err != nil {
+				b = values[match[3]]
+			}
+
+			b = uint16(r)
 
 			result := rightShiftOperation(a, b)
 
 			values[match[4]] = result
 		}
 	}
-	matchnot := renot.MatchString(*line)
-	if matchnot == true {
-		match := renot.FindStringSubmatch(*line)
-		a := values[match[2]]
-		result := notOperation(a)
-		values[match[3]] = result
-	}
 
 }
 
-func puzzle1() int {
-	file := openFile()
+func puzzle1(lines []string) uint16 {
 
-	reader := createReader(file)
-
-	lines := readLines(reader)
 	values := findValues(&lines)
-	filterCircuit(&lines)
-
-	fmt.Println("before: ", values)
 
 	for _, line := range lines {
 		operate(&line, values)
 	}
-
-	fmt.Println("after: ", values)
 
 	return values["a"]
 }
