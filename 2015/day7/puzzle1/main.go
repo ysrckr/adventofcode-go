@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 )
 
@@ -76,6 +77,43 @@ func findValues(lines *[]string) map[string]int {
 	return values
 }
 
+func filterCircuit(lines *[]string) {
+	re := regexp.MustCompile(`(\d+) -> (\w+)`)
+	new := []string{}
+
+	for i, line := range *lines {
+		match := re.MatchString(line)
+		if match == false {
+			continue
+		}
+
+		new = slices.Delete(*lines, i, i+1)
+		*lines = new
+
+	}
+
+}
+
+func notOperation(a int) int {
+	return ^a
+}
+
+func orOperation(a, b int) int {
+	return a | b
+}
+
+func andOperation(a, b int) int {
+	return a & b
+}
+
+func leftShiftOperation(a, b int) int {
+	return a << b
+}
+
+func rightShiftOperation(a, b int) int {
+	return a >> b
+}
+
 func puzzle1() int {
 	file := openFile()
 
@@ -83,6 +121,9 @@ func puzzle1() int {
 
 	lines := readLines(reader)
 	values := findValues(&lines)
+	filterCircuit(&lines)
+
 	fmt.Println(values)
+	fmt.Println(lines)
 	return 0
 }
