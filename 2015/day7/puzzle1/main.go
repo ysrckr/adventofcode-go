@@ -6,7 +6,8 @@ import (
 	"io"
 	"log"
 	"os"
-	"strings"
+	"regexp"
+	"strconv"
 )
 
 func main() {
@@ -30,9 +31,9 @@ func createReader(file *os.File) *bufio.Reader {
 	return reader
 }
 
-func readLines(reader *bufio.Reader) map[string]string {
+func readLines(reader *bufio.Reader) []string {
 
-	circuitMap := map[string]string{}
+	lines := []string{}
 
 	for {
 		line, err := reader.ReadString('\n')
@@ -43,18 +44,36 @@ func readLines(reader *bufio.Reader) map[string]string {
 			log.Fatalf("could not read the line error is: %v", err)
 		}
 
-		circuitMap[getMapKey(line)] = getMapValue(line)
+		lines = append(lines, line)
 
 	}
-	return circuitMap
+	return lines
 }
 
-func getMapKey(text string) string {
-	return strings.Split(text, " -> ")[1]
-}
+func findValues(lines *[]string) map[string]int {
+	values := map[string]int{}
+	re := regexp.MustCompile(`(\d+) -> (\w+)`)
 
-func getMapValue(text string) string {
-	return strings.Split(text, " -> ")[0]
+	for _, line := range *lines {
+		match := re.FindStringSubmatch(line)
+		if len(match) == 0 {
+			continue
+		}
+
+		_, ok := values[match[2]]
+		if ok {
+			continue
+		}
+
+		matchInInt, err := strconv.Atoi(match[1])
+		if err != nil {
+			continue
+		}
+
+		values[match[2]] = matchInInt
+	}
+
+	return values
 }
 
 func puzzle1() int {
@@ -62,7 +81,8 @@ func puzzle1() int {
 
 	reader := createReader(file)
 
-	circuitMap := readLines(reader)
-	fmt.Println(circuitMap)
+	lines := readLines(reader)
+	values := findValues(&lines)
+	fmt.Println(values)
 	return 0
 }
