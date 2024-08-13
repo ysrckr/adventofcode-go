@@ -2,60 +2,15 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 )
-
-type Instruction struct {
-	command     string
-	arguments   []string
-	destination string
-}
-
-func newInstruction(line *string) Instruction {
-	instruction := Instruction{}
-
-	commandRe := regexp.MustCompile(`[A-Z]+`)
-	argumentsRe := regexp.MustCompile(`[a-z0-9]+`)
-
-	instruction.command = commandRe.FindString(*line)
-	instruction.arguments = argumentsRe.FindAllString(*line, -1)
-	instruction.destination = instruction.arguments[len(instruction.arguments)-1]
-	instruction.arguments = instruction.arguments[:len(instruction.arguments)-1]
-
-	return instruction
-}
-
-type Operation interface {
-	not(uint16) uint16
-	or(uint16, uint16) uint16
-	and(uint16, uint16) uint16
-	leftShift(uint16, uint16) uint16
-	rightShift(uint16, uint16) uint16
-}
-
-func not(a uint16) uint16 {
-	return ^a
-}
-
-func or(a, b uint16) uint16 {
-	return a | b
-}
-
-func and(a, b uint16) uint16 {
-	return a & b
-}
-
-func leftShift(a, b uint16) uint16 {
-	return a << b
-}
-
-func rightShift(a, b uint16) uint16 {
-	return a >> b
-}
 
 var wires map[string]uint64
 
@@ -66,22 +21,11 @@ func main() {
 
 	lines := readLines(reader)
 
-	// lines := []string{
-	// 	"123 -> x",
-	// 	"456 -> y",
-	// 	"x AND y -> d",
-	// 	"x OR y -> e",
-	// 	"x LSHIFT 2 -> f",
-	// 	"y RSHIFT 2 -> g",
-	// 	"NOT x -> h",
-	// 	"NOT y -> i",
-	// }
 
-	for _, line := range lines {
-		instruction := newInstruction(&line)
 
-		wires[instruction.destination] = 0
-	}
+	result := puzzle1(&lines)
+
+	fmt.Println(result)
 
 }
 
@@ -125,4 +69,69 @@ func isInt(possibleInt string) bool {
 	}
 
 	return true
+}
+
+func toInt(arg interface{}) int {
+	var val int
+	switch arg.(type) {
+	case string:
+		var err error
+		val, err = strconv.Atoi(arg.(string))
+		if err != nil {
+			panic("error converting string to int " + err.Error())
+		}
+	default:
+		panic(fmt.Sprintf("unhandled type for int casting %T", arg))
+	}
+	return val
+}
+
+func dfs(wires map[string]string, entry string, memo map[string]int) int {
+	if memoVal, ok := memo[entry]; ok {
+		return memoVal
+	}
+
+
+	if regexp.MustCompile("[0-9]").MatchString(entry) {
+		return toInt(entry)
+	}
+
+	sourceRule := wires[entry]
+	parts := strings.Split(sourceRule, " ")
+
+	var result int
+	switch {
+	case len(parts) == 1:
+		result = dfs(wires, parts[0], memo)
+	case parts[0] == "NOT":
+		start := dfs(wires, parts[1], memo)
+		result = (math.MaxUint16) ^ start
+	case parts[1] == "AND":
+		result = dfs(wires, parts[0], memo) & dfs(wires, parts[2], memo)
+	case parts[1] == "OR":
+		result = dfs(wires, parts[0], memo) | dfs(wires, parts[2], memo)
+	case parts[1] == "LSHIFT":
+		result = dfs(wires, parts[0], memo) << dfs(wires, parts[2], memo)
+	case parts[1] == "RSHIFT":
+		result = dfs(wires, parts[0], memo) >> dfs(wires, parts[2], memo)
+	}
+
+  fmt.Println(result)
+
+	memo[entry] = result
+	return result
+}
+
+func puzzle1(lines *[]string) int {
+	wires := map[string]string{}
+
+	for _, instruction := range *lines {
+		parts := strings.Split(instruction, " -> ")
+		wires[parts[1]] = parts[0]
+	}
+
+	aSignal := dfs(wires, "a", map[string]int{})
+
+	return aSignal
+
 }
