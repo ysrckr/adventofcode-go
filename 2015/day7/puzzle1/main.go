@@ -21,8 +21,6 @@ func main() {
 
 	lines := readLines(reader)
 
-
-
 	result := puzzle1(&lines)
 
 	fmt.Println(result)
@@ -49,7 +47,7 @@ func readLines(reader *bufio.Reader) []string {
 	lines := []string{}
 
 	for {
-		line, err := reader.ReadString('\n')
+		line, _, err := reader.ReadLine()
 		if err == io.EOF {
 			break
 		}
@@ -57,7 +55,7 @@ func readLines(reader *bufio.Reader) []string {
 			log.Fatalf("could not read the line error is: %v", err)
 		}
 
-		lines = append(lines, line)
+		lines = append(lines, string(line))
 
 	}
 	return lines
@@ -91,7 +89,6 @@ func dfs(wires map[string]string, entry string, memo map[string]int) int {
 		return memoVal
 	}
 
-
 	if regexp.MustCompile("[0-9]").MatchString(entry) {
 		return toInt(entry)
 	}
@@ -116,8 +113,6 @@ func dfs(wires map[string]string, entry string, memo map[string]int) int {
 		result = dfs(wires, parts[0], memo) >> dfs(wires, parts[2], memo)
 	}
 
-  fmt.Println(result)
-
 	memo[entry] = result
 	return result
 }
@@ -131,6 +126,8 @@ func puzzle1(lines *[]string) int {
 	}
 
 	aSignal := dfs(wires, "a", map[string]int{})
+	wires["b"] = strconv.Itoa(aSignal)
+	aSignal = dfs(wires, "a", map[string]int{})
 
 	return aSignal
 
